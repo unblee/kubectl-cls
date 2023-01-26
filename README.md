@@ -39,6 +39,6 @@ The Kubernetes cluster is assumed to be running in UTC.
 ## Release
 
 ```
-git tag -a vX.Y.Z
+git tag vX.Y.Z
 git push origin vX.Y.Z
 ```
