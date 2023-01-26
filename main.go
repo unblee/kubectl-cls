@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"sort"
+	"strings"
 	"text/tabwriter"
 	"time"
 
@@ -36,11 +37,13 @@ func run(stdout, stderr io.Writer, args []string) error {
 	// Parse flags
 	// -----------------
 	var (
-		fromFlag      string
-		toFlag        string
-		noHeadersFlag bool
-		outputFlag    string
-		versionFlag   bool
+		fromFlag       string
+		toFlag         string
+		noHeadersFlag  bool
+		outputFlag     string
+		selectorFlag   string
+		showLabelsFlag bool
+		versionFlag    bool
 	)
 	fsets := pflag.NewFlagSet(commandName, pflag.ContinueOnError)
 	fsets.SetOutput(stderr)
@@ -48,6 +51,8 @@ func run(stdout, stderr io.Writer, args []string) error {
 	fsets.StringVarP(&toFlag, "to", "", "", "The end time of the period. e.g. '2023-01-24T00:00:00+09:00'.")
 	fsets.BoolVarP(&noHeadersFlag, "no-headers", "", false, "If present, don't print headers.")
 	fsets.StringVarP(&outputFlag, "output", "o", "", "Output format. One of: ''|json.")
+	fsets.StringVarP(&selectorFlag, "selector", "l", "", "Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2).")
+	fsets.BoolVarP(&showLabelsFlag, "show-labels", "", false, "When printing, show all labels as the last column (default hide labels column)")
 	fsets.BoolVarP(&versionFlag, "version", "V", false, "Prints version information.")
 	cfgFlags := genericclioptions.NewConfigFlags(true)
 	cfgFlags.AddFlags(fsets)
@@ -121,7 +126,7 @@ func run(stdout, stderr io.Writer, args []string) error {
 		targetNamespace = *cfgFlags.Namespace
 	}
 
-	cronjobList, err := client.BatchV1().CronJobs(targetNamespace).List(context.Background(), metav1.ListOptions{})
+	cronjobList, err := client.BatchV1().CronJobs(targetNamespace).List(context.Background(), metav1.ListOptions{LabelSelector: selectorFlag})
 	if err != nil {
 		if targetNamespace == "" {
 			targetNamespace = "all"
@@ -137,7 +142,7 @@ func run(stdout, stderr io.Writer, args []string) error {
 	// -----------------
 	ctx, wfAPIClient := wfclient.NewAPIClient(context.Background())
 	cwfClient, _ := wfAPIClient.NewCronWorkflowServiceClient()
-	cronworkflowList, err := cwfClient.ListCronWorkflows(ctx, &cwf.ListCronWorkflowsRequest{Namespace: targetNamespace}, nil)
+	cronworkflowList, err := cwfClient.ListCronWorkflows(ctx, &cwf.ListCronWorkflowsRequest{Namespace: targetNamespace, ListOptions: &metav1.ListOptions{LabelSelector: selectorFlag}}, nil)
 	if err != nil {
 		if targetNamespace == "" {
 			targetNamespace = "all"
@@ -155,7 +160,7 @@ func run(stdout, stderr io.Writer, args []string) error {
 	case "json":
 		printJSON(stdout, includedCronJobs, includedCronWorkflows)
 	case "":
-		printList(stdout, noHeadersFlag, includedCronJobs, includedCronWorkflows)
+		printList(stdout, noHeadersFlag, showLabelsFlag, includedCronJobs, includedCronWorkflows)
 	}
 
 	return nil
@@ -240,21 +245,45 @@ func isInclude(sched cron.Schedule, from, to time.Time) bool {
 	return true
 }
 
-func printList(stdout io.Writer, noHeaders bool, cronjobs []batchv1.CronJob, cronworkflows []wfv1alpha1.CronWorkflow) {
+func printList(stdout io.Writer, noHeaders, showLabels bool, cronjobs []batchv1.CronJob, cronworkflows []wfv1alpha1.CronWorkflow) {
 	tw := tabwriter.NewWriter(stdout, 0, 1, 3, ' ', 0)
 	if !noHeaders {
-		fmt.Fprintln(tw, "Namespace\tName\tSchedule\tSuspend\tKind")
+		if showLabels {
+			fmt.Fprintln(tw, "Namespace\tName\tSchedule\tSuspend\tKind\tLabels")
+		} else {
+			fmt.Fprintln(tw, "Namespace\tName\tSchedule\tSuspend\tKind")
+		}
 	}
 
 	if len(cronjobs) != 0 {
 		for _, cronjob := range cronjobs {
-			fmt.Fprintf(tw, "%s\t%s\t%s\t%t\tCronJob\n", cronjob.Namespace, cronjob.Name, cronjob.Spec.Schedule, *cronjob.Spec.Suspend)
+			if showLabels {
+				labels := make([]string, len(cronjob.GetLabels()))
+				i := 0
+				for k, v := range cronjob.GetLabels() {
+					labels[i] = fmt.Sprintf("%s=%s", k, v)
+					i++
+				}
+				fmt.Fprintf(tw, "%s\t%s\t%s\t%t\tCronJob\t%s\n", cronjob.Namespace, cronjob.Name, cronjob.Spec.Schedule, *cronjob.Spec.Suspend, strings.Join(labels, ","))
+			} else {
+				fmt.Fprintf(tw, "%s\t%s\t%s\t%t\tCronJob\n", cronjob.Namespace, cronjob.Name, cronjob.Spec.Schedule, *cronjob.Spec.Suspend)
+			}
 		}
 	}
 
 	if len(cronworkflows) != 0 {
 		for _, cronworkflow := range cronworkflows {
-			fmt.Fprintf(tw, "%s\t%s\t%s\t%t\tCronWorkflow\n", cronworkflow.Namespace, cronworkflow.Name, cronworkflow.Spec.Schedule, cronworkflow.Spec.Suspend)
+			if showLabels {
+				labels := make([]string, len(cronworkflow.GetLabels()))
+				i := 0
+				for k, v := range cronworkflow.GetLabels() {
+					labels[i] = fmt.Sprintf("%s=%s", k, v)
+					i++
+				}
+				fmt.Fprintf(tw, "%s\t%s\t%s\t%t\tCronWorkflow\t%s\n", cronworkflow.Namespace, cronworkflow.Name, cronworkflow.Spec.Schedule, cronworkflow.Spec.Suspend, strings.Join(labels, ","))
+			} else {
+				fmt.Fprintf(tw, "%s\t%s\t%s\t%t\tCronWorkflow\n", cronworkflow.Namespace, cronworkflow.Name, cronworkflow.Spec.Schedule, cronworkflow.Spec.Suspend)
+			}
 		}
 	}
 
