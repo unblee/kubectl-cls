@@ -115,7 +115,7 @@ func run(stdout, stderr io.Writer, args []string) error {
 		return fmt.Errorf("failed to get kubernetes REST client configuration: %w", err)
 	}
 
-	client, err := kubernetes.NewForConfig(cfg)
+	k8sClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
 		return fmt.Errorf("failed to get kubernetes client: %w", err)
 	}
@@ -125,7 +125,7 @@ func run(stdout, stderr io.Writer, args []string) error {
 		targetNamespace = *cfgFlags.Namespace
 	}
 
-	cronjobList, err := client.BatchV1().CronJobs(targetNamespace).List(context.Background(), metav1.ListOptions{LabelSelector: selectorFlag})
+	cronjobList, err := k8sClient.BatchV1().CronJobs(targetNamespace).List(context.Background(), metav1.ListOptions{LabelSelector: selectorFlag})
 	if err != nil {
 		if targetNamespace == "" {
 			targetNamespace = "all"
