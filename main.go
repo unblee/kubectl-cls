@@ -72,7 +72,7 @@ func run(stdout, stderr io.Writer, args []string) error {
 
 	var (
 		err        error
-		timeLayout = "2006-01-02T15:04:05Z07:00"
+		timeLayout = time.RFC3339
 		from       time.Time
 		to         time.Time
 	)
