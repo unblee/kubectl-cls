@@ -58,6 +58,11 @@ func run(stdout, stderr io.Writer, args []string) error {
 
 	fsets.Usage = func() {
 		fmt.Fprintf(stderr, "Usage of %s:\n", commandName)
+		fmt.Fprintln(stderr, "")
+		fmt.Fprintln(stderr, "Example")
+		fmt.Fprintln(stderr, "  $ kubectl-cls --from 2023-01-24T00:00:00+09:00 --to 2023-01-24T06:00:00+09:00")
+		fmt.Fprintln(stderr, "")
+		fmt.Fprintln(stderr, "Flags")
 		fmt.Fprint(stderr, fsets.FlagUsages())
 	}
 
