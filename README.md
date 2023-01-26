@@ -35,3 +35,10 @@ namespace-z   quux   0 * * * *            false     CronWorkflow
 ## Note
 
 The Kubernetes cluster is assumed to be running in UTC.
+
+## Release
+
+```
+git tag -a vX.Y.Z
+git push origin vX.Y.Z
+```
