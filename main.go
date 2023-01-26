@@ -12,9 +12,8 @@ import (
 	"text/tabwriter"
 	"time"
 
-	wfclient "github.com/argoproj/argo-workflows/v3/cmd/argo/commands/client"
-	cwf "github.com/argoproj/argo-workflows/v3/pkg/apiclient/cronworkflow"
 	wfv1alpha1 "github.com/argoproj/argo-workflows/v3/pkg/apis/workflow/v1alpha1"
+	argov1alpha1 "github.com/argoproj/argo-workflows/v3/pkg/client/clientset/versioned/typed/workflow/v1alpha1"
 	"github.com/robfig/cron/v3"
 	"github.com/spf13/pflag"
 	"golang.org/x/exp/maps"
@@ -140,9 +139,11 @@ func run(stdout, stderr io.Writer, args []string) error {
 
 	// List CronWorkflows
 	// -----------------
-	ctx, wfAPIClient := wfclient.NewAPIClient(context.Background())
-	cwfClient, _ := wfAPIClient.NewCronWorkflowServiceClient()
-	cronworkflowList, err := cwfClient.ListCronWorkflows(ctx, &cwf.ListCronWorkflowsRequest{Namespace: targetNamespace, ListOptions: &metav1.ListOptions{LabelSelector: selectorFlag}}, nil)
+	argoClient, err := argov1alpha1.NewForConfig(cfg)
+	if err != nil {
+		return fmt.Errorf("failed to get argo workflows client: %w", err)
+	}
+	cronworkflowList, err := argoClient.CronWorkflows(targetNamespace).List(context.Background(), metav1.ListOptions{LabelSelector: selectorFlag})
 	if err != nil {
 		if targetNamespace == "" {
 			targetNamespace = "all"
