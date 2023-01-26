@@ -23,7 +23,7 @@ TBD
 The `--from` and `--to` options must be specified. Its format is RFC3339.
 
 ```
-kubectl cls --from 2023-01-24T00:00:00+09:00 --to 2023-01-24T06:00:00+09:00
+$ kubectl cls --from 2023-01-24T00:00:00+09:00 --to 2023-01-24T06:00:00+09:00
 Namespace     Name   Schedule             Suspend   Kind
 namespace-a   foo    */10 * * * *         false     CronJob
 namespace-b   bar    0 15 * * *           false     CronJob
