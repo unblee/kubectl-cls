@@ -6,7 +6,14 @@ List CronJobs and CronWorkflows that are scheduled and executed during a specifi
 
 ### Homebrew
 
-TBD
+```
+# tap and install
+$ brew tap unblee/tap
+$ brew install kubectl-cls
+
+# install directly
+$ brew install unblee/tap/kubectl-cls
+```
 
 ### Go
 
@@ -16,7 +23,7 @@ go install github.com/unblee/kubectl-cls@latest
 
 ### Binaries
 
-TBD
+See [releases page](https://github.com/unblee/kubectl-cls/releases).
 
 ## Usage
 
