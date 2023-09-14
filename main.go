@@ -102,7 +102,7 @@ func run(stdout, stderr io.Writer, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to parse '--to' value: %w", err)
 	}
-	to = from.UTC() // Convert to UTC for easy comparison with the schedule.
+	to = to.UTC() // Convert to UTC for easy comparison with the schedule.
 
 	// Validation
 	// -----------------
